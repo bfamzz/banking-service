@@ -16,8 +16,14 @@ SELECT * FROM transfers
 LIMIT $1
 OFFSET $2;
 
--- name: ListTransfersByAccountId :many
+-- name: ListTransfersByFromAccountID :many
 SELECT * FROM transfers
-WHERE from_account_id = $1 OR to_account_id = $1
+WHERE from_account_id = $1
+LIMIT $2
+OFFSET $3;
+
+-- name: ListTransfersByToAccountID :many
+SELECT * FROM transfers
+WHERE to_account_id = $1
 LIMIT $2
 OFFSET $3;

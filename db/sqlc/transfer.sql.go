@@ -96,21 +96,63 @@ func (q *Queries) ListTransfers(ctx context.Context, arg ListTransfersParams) ([
 	return items, nil
 }
 
-const listTransfersByAccountId = `-- name: ListTransfersByAccountId :many
+const listTransfersByFromAccountID = `-- name: ListTransfersByFromAccountID :many
 SELECT id, from_account_id, to_account_id, amount, created_at FROM transfers
-WHERE from_account_id = $1 OR to_account_id = $1
+WHERE from_account_id = $1
 LIMIT $2
 OFFSET $3
 `
 
-type ListTransfersByAccountIdParams struct {
+type ListTransfersByFromAccountIDParams struct {
 	FromAccountID int64 `json:"from_account_id"`
 	Limit         int32 `json:"limit"`
 	Offset        int32 `json:"offset"`
 }
 
-func (q *Queries) ListTransfersByAccountId(ctx context.Context, arg ListTransfersByAccountIdParams) ([]Transfer, error) {
-	rows, err := q.db.QueryContext(ctx, listTransfersByAccountId, arg.FromAccountID, arg.Limit, arg.Offset)
+func (q *Queries) ListTransfersByFromAccountID(ctx context.Context, arg ListTransfersByFromAccountIDParams) ([]Transfer, error) {
+	rows, err := q.db.QueryContext(ctx, listTransfersByFromAccountID, arg.FromAccountID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Transfer
+	for rows.Next() {
+		var i Transfer
+		if err := rows.Scan(
+			&i.ID,
+			&i.FromAccountID,
+			&i.ToAccountID,
+			&i.Amount,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listTransfersByToAccountID = `-- name: ListTransfersByToAccountID :many
+SELECT id, from_account_id, to_account_id, amount, created_at FROM transfers
+WHERE to_account_id = $1
+LIMIT $2
+OFFSET $3
+`
+
+type ListTransfersByToAccountIDParams struct {
+	ToAccountID int64 `json:"to_account_id"`
+	Limit       int32 `json:"limit"`
+	Offset      int32 `json:"offset"`
+}
+
+func (q *Queries) ListTransfersByToAccountID(ctx context.Context, arg ListTransfersByToAccountIDParams) ([]Transfer, error) {
+	rows, err := q.db.QueryContext(ctx, listTransfersByToAccountID, arg.ToAccountID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
