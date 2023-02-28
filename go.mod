@@ -3,18 +3,15 @@ module github.com/bfamzz/banking-service
 go 1.20
 
 require (
+	aidanwoods.dev/go-paseto v1.2.0
 	github.com/gin-gonic/gin v1.9.0
 	github.com/go-playground/validator/v10 v10.11.2
+	github.com/golang-jwt/jwt/v5 v5.0.0-rc.1
 	github.com/golang/mock v1.4.4
 	github.com/lib/pq v1.10.7
 	github.com/spf13/viper v1.15.0
 	github.com/stretchr/testify v1.8.2
 	golang.org/x/crypto v0.6.0
-)
-
-require (
-	aidanwoods.dev/go-paseto v1.2.0 // indirect
-	github.com/golang-jwt/jwt/v5 v5.0.0-rc.1 // indirect
 )
 
 require (
