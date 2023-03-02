@@ -18,7 +18,7 @@ jobs:
         env:
           POSTGRES_USER: root
           POSTGRES_PASSWORD: secret
-          POSTGRES_DB: banking-service
+          POSTGRES_DB: banking_service
         ports:
           - 5432:5432
         options: >-
