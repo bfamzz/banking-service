@@ -14,7 +14,7 @@ permissions:
 jobs:
 
   deploy:
-    name: Build image
+    name: Build and deploy image
     runs-on: ubuntu-latest
 
     steps:
