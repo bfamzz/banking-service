@@ -4,8 +4,9 @@ metadata:
   name: aws-auth
   namespace: kube-system
 data:
-  mapRoles:
-    - groups:
-      - full-access
-      rolearn: arn:aws:iam::729371877866:role/github-actions-role
-      username: system:node:{{EC2PrivateDNSName}}
+  mapUsers: |
+    - userarn: arn:aws:iam::729371877866:user/github-ci
+      username: github-ci
+      groups:
+        - system:masters
+   

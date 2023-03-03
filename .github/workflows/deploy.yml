@@ -27,7 +27,7 @@ jobs:
         version: 'v1.26.2'
       id: install
       
-    - name: Configure AWS credentials
+    - name: Configure AWS credentials for AWS ECR
       uses: aws-actions/configure-aws-credentials@v1
       with:
         role-to-assume: arn:aws:iam::729371877866:role/github-actions-role
@@ -51,12 +51,17 @@ jobs:
 
     - name: Update kubeconfig
       run: aws eks update-kubeconfig --name banking-service --region us-east-2
+
+    - name: Configure AWS credentials for AWS EKS
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        role-to-assume: arn:aws:iam::729371877866:role/eksClusterRole
+        aws-region: ${{ env.AWS_REGION }}
     
     - name: Deploy image to AWS EKS
       run: |
-        # kubectl apply -f eks/full-access.yaml
         kubectl apply -f eks/aws-auth.yaml
-        # kubectl apply -f eks/deployment.yaml
-        # kubectl apply -f eks/service.yaml
-        # kubectl apply -f eks/issuer.yaml
-        # kubectl apply -f eks/ingress.yaml
+        kubectl apply -f eks/deployment.yaml
+        kubectl apply -f eks/service.yaml
+        kubectl apply -f eks/issuer.yaml
+        kubectl apply -f eks/ingress.yaml
