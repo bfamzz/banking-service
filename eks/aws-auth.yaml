@@ -13,5 +13,4 @@ data:
     - rolearn: arn:aws:iam::729371877866:role/github-actions-role
       username: github-actions-role
       groups:
-        - system:bootstrappers
-        - system:nodes 
+        - system:masters
