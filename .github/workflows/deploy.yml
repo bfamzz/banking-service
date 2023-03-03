@@ -24,11 +24,11 @@ jobs:
     - name: Install kubectl
       uses: azure/setup-kubectl@v3
       with:
-        version: 'v1.26.2' # default is latest stable
+        version: 'v1.26.2'
       id: install
       
     - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v1 # More information on this action can be found below in the 'AWS Credentials' section
+      uses: aws-actions/configure-aws-credentials@v1
       with:
         role-to-assume: arn:aws:iam::729371877866:role/github-actions-role
         aws-region: ${{ env.AWS_REGION }}
@@ -54,9 +54,9 @@ jobs:
     
     - name: Deploy image to AWS EKS
       run: |
-        kubectl apply -f eks/full-access.yaml
+        # kubectl apply -f eks/full-access.yaml
         kubectl apply -f eks/aws-auth.yaml
-        kubectl apply -f eks/deployment.yaml
-        kubectl apply -f eks/service.yaml
-        kubectl apply -f eks/issuer.yaml
-        kubectl apply -f eks/ingress.yaml
+        # kubectl apply -f eks/deployment.yaml
+        # kubectl apply -f eks/service.yaml
+        # kubectl apply -f eks/issuer.yaml
+        # kubectl apply -f eks/ingress.yaml
