@@ -3,7 +3,7 @@ kind: ClusterRole
 metadata:
   name: full-access-clusterrole
 rules:
-- apiGroups: ["rbac.authorization.k8s.io"]
+- apiGroups: ["*"]
   resources: ["*"]
   verbs: ["*"]
 ---
