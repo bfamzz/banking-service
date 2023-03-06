@@ -12,11 +12,14 @@ import (
 	"github.com/bfamzz/banking-service/gapi"
 	"github.com/bfamzz/banking-service/pb"
 	"github.com/bfamzz/banking-service/util"
+	"github.com/golang-migrate/migrate/v4"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/protobuf/encoding/protojson"
 
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	_ "github.com/lib/pq"
 )
 
@@ -30,11 +33,26 @@ func main() {
 		log.Fatal("cannot connect to the db: ", err)
 	}
 
+	runDbMigration(config.DBMigrationUrl, config.DBSource)
+
 	store := db.NewStore(conn)
 
 	go rungRPCGatewayServer(config, store)
 
 	rungRPCServer(config, store)
+}
+
+func runDbMigration(migrationUrl string, dbSource string) {
+	migration, err := migrate.New(migrationUrl, dbSource)
+	if err != nil {
+		log.Fatal("cannot create db migration instance:", err)
+	}
+
+	if err = migration.Up(); err != nil && err != migrate.ErrNoChange{
+		log.Fatal("failed to run migrate up:", err)
+	}
+
+	log.Println("db migration was successful")
 }
 
 func rungRPCServer(config util.Config, store db.Store) {
