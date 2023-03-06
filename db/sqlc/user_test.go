@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"database/sql"
 	"testing"
 	"time"
 
@@ -52,4 +53,76 @@ func TestGetUser(t *testing.T) {
 
 	require.WithinDuration(t, user1.PasswordChangedAt, user2.PasswordChangedAt, time.Second)
 	require.WithinDuration(t, user1.CreatedAt, user2.CreatedAt, time.Second)
+}
+
+func TestUpdateUserFullName(t *testing.T) {
+	user := createRandomUser(t)
+	newFullName := util.RandomOwner()
+
+	updatedUser, err := testQueries.UpdateUser(context.Background(), UpdateUserParams{
+		Username: user.Username,
+		FullName: sql.NullString{
+			String: newFullName,
+			Valid: true,
+		},
+	})
+	require.NoError(t, err)
+	require.NotEmpty(t, updatedUser)
+
+	require.NotEqual(t, user.FullName, updatedUser.FullName)
+	require.Equal(t, newFullName, updatedUser.FullName)
+	require.Equal(t, user.HashedPassword, updatedUser.HashedPassword)
+	require.Equal(t, user.Email, updatedUser.Email)
+}
+
+func TestUpdateUserPassword(t *testing.T) {
+	user := createRandomUser(t)
+	newHashedPassword, err := util.HashPassword("new_password")
+	require.NoError(t, err)
+	require.NotEmpty(t, newHashedPassword)
+
+	updatedUser, err := testQueries.UpdateUser(context.Background(), UpdateUserParams{
+		Username: user.Username,
+		HashedPassword: sql.NullString{
+			String: newHashedPassword,
+			Valid: true,
+		},
+	})
+	require.NoError(t, err)
+	require.NotEmpty(t, updatedUser)
+
+	require.Equal(t, newHashedPassword, updatedUser.HashedPassword)
+	require.NotEqual(t, user.HashedPassword, updatedUser.HashedPassword)
+	require.Equal(t, user.FullName, updatedUser.FullName)
+	require.Equal(t, user.Username, updatedUser.Username)
+	require.Equal(t, user.Email, updatedUser.Email)
+}
+
+func TestUpdateUserAllFieldsExceptUsernameAndEmail(t *testing.T) {
+	user := createRandomUser(t)
+	newHashedPassword, err := util.HashPassword("new_password")
+	require.NoError(t, err)
+	require.NotEmpty(t, newHashedPassword)
+	newFullName := util.RandomOwner()
+
+	updatedUser, err := testQueries.UpdateUser(context.Background(), UpdateUserParams{
+		Username: user.Username,
+		FullName: sql.NullString{
+			String: newFullName,
+			Valid: true,
+		},
+		HashedPassword: sql.NullString{
+			String: newHashedPassword,
+			Valid: true,
+		},
+	})
+	require.NoError(t, err)
+	require.NotEmpty(t, updatedUser)
+
+	require.Equal(t, newHashedPassword, updatedUser.HashedPassword)
+	require.Equal(t, newFullName, updatedUser.FullName)
+	require.NotEqual(t, user.HashedPassword, updatedUser.HashedPassword)
+	require.NotEqual(t, user.FullName, updatedUser.FullName)
+	require.Equal(t, user.Username, updatedUser.Username)
+	require.Equal(t, user.Email, updatedUser.Email)
 }
