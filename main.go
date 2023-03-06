@@ -1,17 +1,21 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"log"
 	"net"
+	"net/http"
 
 	"github.com/bfamzz/banking-service/api"
 	db "github.com/bfamzz/banking-service/db/sqlc"
 	"github.com/bfamzz/banking-service/gapi"
 	"github.com/bfamzz/banking-service/pb"
 	"github.com/bfamzz/banking-service/util"
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
+	"google.golang.org/protobuf/encoding/protojson"
 
 	_ "github.com/lib/pq"
 )
@@ -27,6 +31,8 @@ func main() {
 	}
 
 	store := db.NewStore(conn)
+
+	go rungRPCGatewayServer(config, store)
 
 	rungRPCServer(config, store)
 }
@@ -50,6 +56,45 @@ func rungRPCServer(config util.Config, store db.Store) {
 	err = grpcSever.Serve(listener)
 	if err != nil {
 		log.Fatal("cannot start grpc server:", err)
+	}
+}
+
+func rungRPCGatewayServer(config util.Config, store db.Store) {
+	server, err := gapi.NewServer(config, store)
+	if err != nil {
+		log.Fatal("cannot create grpc server:", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	jsonOption := runtime.WithMarshalerOption(runtime.MIMEWildcard, &runtime.JSONPb{
+		MarshalOptions: protojson.MarshalOptions{
+			UseProtoNames: true,
+		},
+		UnmarshalOptions: protojson.UnmarshalOptions{
+			DiscardUnknown: true,
+		},
+	})
+	
+	grpcMux := runtime.NewServeMux(jsonOption)
+	err = pb.RegisterBankingServiceHandlerServer(ctx, grpcMux, server)
+	if err != nil {
+		log.Fatal("cannot register handler server")
+	}
+
+	mux := http.NewServeMux()
+	mux.Handle("/", grpcMux)
+
+	listener, err := net.Listen("tcp", config.HTTPServerAddress)
+	if err != nil {
+		log.Fatal("cannot create grpc listener:", err)
+	}
+
+	log.Printf("starting grpc gateway server at %s", listener.Addr().String())
+	err = http.Serve(listener, mux)
+	if err != nil {
+		log.Fatal("cannot start grpc gateway server:", err)
 	}
 }
 
