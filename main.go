@@ -124,7 +124,8 @@ func rungRPCGatewayServer(config util.Config, store db.Store) {
 	}
 
 	log.Info().Msgf("starting grpc gateway server at %s", listener.Addr().String())
-	err = http.Serve(listener, mux)
+	handler := gapi.HttpLogger(mux)
+	err = http.Serve(listener, handler)
 	if err != nil {
 		log.Fatal().Err(err).Msg("cannot start grpc gateway server:")
 	}
