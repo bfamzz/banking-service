@@ -12,8 +12,10 @@ import (
 	"github.com/bfamzz/banking-service/gapi"
 	"github.com/bfamzz/banking-service/pb"
 	"github.com/bfamzz/banking-service/util"
+	"github.com/bfamzz/banking-service/worker"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/hibiken/asynq"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
@@ -39,22 +41,28 @@ func main() {
 
 	conn, err := sql.Open(config.DBDriver, config.DBSource)
 	if err != nil {
-		log.Fatal().Err(err).Msg("cannot connect to the db: ")
+		log.Fatal().Err(err).Msg("cannot connect to the db")
 	}
 
 	runDbMigration(config.DBMigrationUrl, config.DBSource)
 
 	store := db.NewStore(conn)
 
-	go rungRPCGatewayServer(config, store)
+	redisOpt := asynq.RedisClientOpt{
+		Addr: config.RedisAddress,
+	}
 
-	rungRPCServer(config, store)
+	taskDistributor := worker.NewRedisTaskDistributor(redisOpt)
+
+	go runTaskProcessor(redisOpt, store)
+	go rungRPCGatewayServer(config, store, taskDistributor)
+	rungRPCServer(config, store, taskDistributor)
 }
 
 func runDbMigration(migrationUrl string, dbSource string) {
 	migration, err := migrate.New(migrationUrl, dbSource)
 	if err != nil {
-		log.Fatal().Err(err).Msg("cannot create db migration instance:")
+		log.Fatal().Err(err).Msg("cannot create db migration instance")
 	}
 
 	if err = migration.Up(); err != nil && err != migrate.ErrNoChange{
@@ -64,10 +72,20 @@ func runDbMigration(migrationUrl string, dbSource string) {
 	log.Info().Msg("db migration was successful")
 }
 
-func rungRPCServer(config util.Config, store db.Store) {
-	server, err := gapi.NewServer(config, store)
+func runTaskProcessor(redisOpt asynq.RedisClientOpt, store db.Store) {
+	taskProcessor := worker.NewRedisTaskProcessor(redisOpt, store)
+	log.Info().Msg("start task processor")
+
+	err := taskProcessor.Start()
 	if err != nil {
-		log.Fatal().Err(err).Msg("cannot create grpc server:")
+		log.Fatal().Err(err).Msg("failed to start task processor")
+	}
+}
+
+func rungRPCServer(config util.Config, store db.Store, taskDistributor worker.TaskDistributor) {
+	server, err := gapi.NewServer(config, store, taskDistributor)
+	if err != nil {
+		log.Fatal().Err(err).Msg("cannot create grpc server")
 	}
 
 	grpcLogger := grpc.UnaryInterceptor(gapi.GrpcLogger)
@@ -78,7 +96,7 @@ func rungRPCServer(config util.Config, store db.Store) {
 
 	listener, err := net.Listen("tcp", config.GRPCServerAddress)
 	if err != nil {
-		log.Fatal().Err(err).Msg("cannot create grpc listener:")
+		log.Fatal().Err(err).Msg("cannot create grpc listener")
 	}
 
 	log.Info().Msgf("starting a gRPC server at %s", listener.Addr().String())
@@ -88,10 +106,10 @@ func rungRPCServer(config util.Config, store db.Store) {
 	}
 }
 
-func rungRPCGatewayServer(config util.Config, store db.Store) {
-	server, err := gapi.NewServer(config, store)
+func rungRPCGatewayServer(config util.Config, store db.Store, taskDistributor worker.TaskDistributor) {
+	server, err := gapi.NewServer(config, store, taskDistributor)
 	if err != nil {
-		log.Fatal().Err(err).Msg("cannot create grpc server:")
+		log.Fatal().Err(err).Msg("cannot create grpc server")
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -120,25 +138,25 @@ func rungRPCGatewayServer(config util.Config, store db.Store) {
 
 	listener, err := net.Listen("tcp", config.HTTPServerAddress)
 	if err != nil {
-		log.Fatal().Err(err).Msg("cannot create grpc listener:")
+		log.Fatal().Err(err).Msg("cannot create grpc listener")
 	}
 
 	log.Info().Msgf("starting grpc gateway server at %s", listener.Addr().String())
 	handler := gapi.HttpLogger(mux)
 	err = http.Serve(listener, handler)
 	if err != nil {
-		log.Fatal().Err(err).Msg("cannot start grpc gateway server:")
+		log.Fatal().Err(err).Msg("cannot start grpc gateway server")
 	}
 }
 
 func runHTTPServer(config util.Config, store db.Store) {
 	server, err := api.NewServer(config, store)
 	if err != nil {
-		log.Fatal().Err(err).Msg("cannot create http server:")
+		log.Fatal().Err(err).Msg("cannot create http server")
 	}
 
 	err = server.Start(config.HTTPServerAddress)
 	if err != nil {
-		log.Fatal().Err(err).Msg("cannot start server:")
+		log.Fatal().Err(err).Msg("cannot start server")
 	}
 }
