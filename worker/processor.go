@@ -22,7 +22,7 @@ type RedisTaskProcessor struct {
 	server *asynq.Server
 	store  db.Store
 }
-sa
+
 func NewRedisTaskProcessor(redisOpt asynq.RedisClientOpt, store db.Store) TaskProcessor {
 	server := asynq.NewServer(redisOpt, asynq.Config{
 		Queues: map[string]int{
