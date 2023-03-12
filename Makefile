@@ -1,3 +1,5 @@
+DB_URL=postgresql://root:secret@localhost:5432/banking_service?sslmode=disable
+
 postgres:
 	docker run --name banking-service-db -p 5432:5432 -e POSTGRES_USER=root -e POSTGRES_PASSWORD=secret -d postgres
 
@@ -8,16 +10,19 @@ dropdb:
 	docker exec -it banking-service-db dropdb --username=root --owner=root banking_service
 
 migrateup:
-	migrate -path db/migration -database "postgresql://root:secret@localhost:5432/banking_service?sslmode=disable" -verbose up
+	migrate -path db/migration -database "$(DB_URL)" -verbose up
 
 migrateup1:
-	migrate -path db/migration -database "postgresql://root:secret@localhost:5432/banking_service?sslmode=disable" -verbose up 1
+	migrate -path db/migration -database "$(DB_URL)" -verbose up 1
 
 migratedown:
-	migrate -path db/migration -database "postgresql://root:secret@localhost:5432/banking_service?sslmode=disable" -verbose down
+	migrate -path db/migration -database "$(DB_URL)" -verbose down
 
 migratedown1:
-	migrate -path db/migration -database "postgresql://root:secret@localhost:5432/banking_service?sslmode=disable" -verbose down 1
+	migrate -path db/migration -database "$(DB_URL)" -verbose down 1
+
+db_schema:
+	dbml2sql --postgres -o docs/schema.sql docs/db.dbml
 
 sqlc:
 	sqlc generate
@@ -46,4 +51,4 @@ evans:
 redis:
 	docker run --name redis -p 6379:6379 -d redis:7-alpine
 
-.PHONY: postgres createdb dropdb migrateup migrateup1 migratedown migratedown1 sqlc test server mock proto evans redis
+.PHONY: postgres createdb dropdb migrateup migrateup1 migratedown migratedown1 db_schema sqlc test server mock proto evans redis
