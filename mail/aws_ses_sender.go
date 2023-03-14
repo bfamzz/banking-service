@@ -11,6 +11,7 @@ import (
 
 const (
 	welcomeTemplateName = "WelcomeTemplate"
+	verificationTemplateName = "VerificationTemplate"
 )
 
 type SesSender struct {
@@ -30,24 +31,8 @@ func NewSesSender(sdkConfig aws.Config, fromEmailAddress string, fromEmailNameAn
 func (emailSender *SesSender) SendTemplateEmail(templateData string, to []string, cc []string, bcc []string, attachments []string) error {
 	_, err := emailSender.client.SendEmail(context.TODO(), &sesv2.SendEmailInput{
 		Content: &types.EmailContent{
-			// Simple: &types.Message{
-			// 	Body: &types.Body{
-			// 		Html: &types.Content{
-			// 			Data:    util.StringPointer(charset),
-			// 			Charset: util.StringPointer(charset),
-			// 		},
-			// 		Text: &types.Content{
-			// 			Data:    util.StringPointer(charset),
-			// 			Charset: util.StringPointer(charset),
-			// 		},
-			// 	},
-			// 	Subject: &types.Content{
-			// 		Data:    &subject,
-			// 		Charset: util.StringPointer(charset),
-			// 	},
-			// },
 			Template: &types.Template{
-				TemplateName: util.StringPointer(welcomeTemplateName),
+				TemplateName: util.StringPointer(verificationTemplateName),
 				TemplateData: &templateData,
 			},
 		},
