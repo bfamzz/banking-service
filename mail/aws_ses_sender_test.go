@@ -1,6 +1,7 @@
 package mail
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -19,6 +20,12 @@ func TestSendEmailWithAwsSES(t *testing.T) {
 
 	fromEmailNameAndAddress := fmt.Sprintf("%s <%s>", config.EmailSenderName, config.EmailSenderAddress)
 	sender := NewSesSender(sdkConfig, config.EmailSenderAddress, fromEmailNameAndAddress)
-	err = sender.SendTemplateEmail("{}", []string{ "testrasr@gmail.com" }, nil, nil, nil)
+	templateData := map[string]string{
+		"website":"https://www.famzzie.com",
+	}
+	templateDataString, err := json.Marshal(templateData)
+	require.NoError(t, err)
+	require.NotEmpty(t, templateDataString)
+	err = sender.SendTemplateEmail(string(templateDataString), []string{ "testrasr@gmail.com" }, nil, nil, nil)
 	require.NoError(t, err)
 }
