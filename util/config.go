@@ -1,8 +1,11 @@
 package util
 
 import (
+	"context"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/spf13/viper"
 )
 
@@ -19,6 +22,8 @@ type Config struct {
 	TokenSymmetricKey    string        `mapstructure:"TOKEN_SYMMETRIC_KEY"`
 	AccessTokenDuration  time.Duration `mapstructure:"ACCESS_TOKEN_DURATION"`
 	RefreshTokenDuration time.Duration `mapstructure:"REFRESH_TOKEN_DURATION"`
+	EmailSenderName      string        `mapstructure:"EMAIL_SENDER_NAME"`
+	EmailSenderAddress   string        `mapstructure:"EMAIL_SENDER_ADDRESS"`
 }
 
 // loadConfig read configuration from file or environment variable
@@ -36,4 +41,13 @@ func LoadConfig(path string) (config Config, err error) {
 
 	err = viper.Unmarshal(&config)
 	return
+}
+
+func LoadAwsSdkConfig() (aws.Config, error) {
+	sdkConfig, err := config.LoadDefaultConfig(context.TODO())
+	if err != nil {
+		return aws.Config{}, err
+	}
+
+	return sdkConfig, nil
 }

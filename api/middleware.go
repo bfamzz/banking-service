@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	authorizationHeaderKey = "authorization"
+	authorizationHeaderKey  = "authorization"
 	authorizationTypeBearer = "bearer"
 	authorizationPayloadKey = "authorization_payload"
 )
@@ -48,5 +48,5 @@ func authMiddleware(tokenMaker token.Maker) gin.HandlerFunc {
 
 		ctx.Set(authorizationPayloadKey, payload)
 		ctx.Next()
- 	}
+	}
 }
