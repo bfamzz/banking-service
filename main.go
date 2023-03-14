@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/bfamzz/banking-service/api"
 	db "github.com/bfamzz/banking-service/db/sqlc"
 	"github.com/bfamzz/banking-service/gapi"
@@ -34,6 +35,11 @@ func main() {
 		log.Fatal().Err(err).Msg("cannot load config")
 	}
 
+	sdkConfig, err := util.LoadAwsSdkConfig()
+	if err != nil {
+		log.Fatal().Err(err).Msg("cannot load aws sdk config. Have you created your AWS account?")
+	}
+
 	if config.Environment == "development" {
 		zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
@@ -55,8 +61,8 @@ func main() {
 	taskDistributor := worker.NewRedisTaskDistributor(redisOpt)
 
 	go runTaskProcessor(redisOpt, store)
-	go rungRPCGatewayServer(config, store, taskDistributor)
-	rungRPCServer(config, store, taskDistributor)
+	go rungRPCGatewayServer(config, sdkConfig, store, taskDistributor)
+	rungRPCServer(config, sdkConfig, store, taskDistributor)
 }
 
 func runDbMigration(migrationUrl string, dbSource string) {
@@ -65,7 +71,7 @@ func runDbMigration(migrationUrl string, dbSource string) {
 		log.Fatal().Err(err).Msg("cannot create db migration instance")
 	}
 
-	if err = migration.Up(); err != nil && err != migrate.ErrNoChange{
+	if err = migration.Up(); err != nil && err != migrate.ErrNoChange {
 		log.Fatal().Err(err).Msg("failed to run migrate up:")
 	}
 
@@ -82,8 +88,8 @@ func runTaskProcessor(redisOpt asynq.RedisClientOpt, store db.Store) {
 	}
 }
 
-func rungRPCServer(config util.Config, store db.Store, taskDistributor worker.TaskDistributor) {
-	server, err := gapi.NewServer(config, store, taskDistributor)
+func rungRPCServer(config util.Config, sdkConfig aws.Config, store db.Store, taskDistributor worker.TaskDistributor) {
+	server, err := gapi.NewServer(config, sdkConfig, store, taskDistributor)
 	if err != nil {
 		log.Fatal().Err(err).Msg("cannot create grpc server")
 	}
@@ -106,8 +112,8 @@ func rungRPCServer(config util.Config, store db.Store, taskDistributor worker.Ta
 	}
 }
 
-func rungRPCGatewayServer(config util.Config, store db.Store, taskDistributor worker.TaskDistributor) {
-	server, err := gapi.NewServer(config, store, taskDistributor)
+func rungRPCGatewayServer(config util.Config, sdkConfig aws.Config, store db.Store, taskDistributor worker.TaskDistributor) {
+	server, err := gapi.NewServer(config, sdkConfig, store, taskDistributor)
 	if err != nil {
 		log.Fatal().Err(err).Msg("cannot create grpc server")
 	}
@@ -123,7 +129,7 @@ func rungRPCGatewayServer(config util.Config, store db.Store, taskDistributor wo
 			DiscardUnknown: true,
 		},
 	})
-	
+
 	grpcMux := runtime.NewServeMux(jsonOption)
 	err = pb.RegisterBankingServiceHandlerServer(ctx, grpcMux, server)
 	if err != nil {
