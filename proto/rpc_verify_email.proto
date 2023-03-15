@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package pb;
+
+option go_package = "github.com/bfamzz/banking-service/pb";
+
+message VerifyEmailRequest {
+    int32 id = 1;
+    string secret_code = 2;
+}
+
+message VerifyEmailResponse {
+    string verify_email_status = 1;
+}
