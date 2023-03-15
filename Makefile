@@ -1,7 +1,7 @@
 DB_URL=postgresql://root:secret@localhost:5432/banking_service?sslmode=disable
 
 postgres:
-	docker run --name banking-service-db -p 5432:5432 -e POSTGRES_USER=root -e POSTGRES_PASSWORD=secret -d postgres
+	docker run --name banking-service-db -p 5432:5432 -e POSTGRES_USER=root -e POSTGRES_PASSWORD=secret -d postgres:15-alpine
 
 createdb:
 	docker exec -it banking-service-db createdb --username=root --owner=root banking_service
@@ -20,6 +20,9 @@ migratedown:
 
 migratedown1:
 	migrate -path db/migration -database "$(DB_URL)" -verbose down 1
+
+new_migration:
+	migrate create -ext sql -dir db/migration -seq $(name)
 
 db_schema:
 	dbml2sql --postgres -o docs/schema.sql docs/db.dbml
@@ -51,4 +54,4 @@ evans:
 redis:
 	docker run --name redis -p 6379:6379 -d redis:7-alpine
 
-.PHONY: postgres createdb dropdb migrateup migrateup1 migratedown migratedown1 db_schema sqlc test server mock proto evans redis
+.PHONY: postgres createdb dropdb migrateup migrateup1 migratedown migratedown1 new_migration db_schema sqlc test server mock proto evans redis

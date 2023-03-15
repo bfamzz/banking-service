@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 
+	db "github.com/bfamzz/banking-service/db/sqlc"
+	"github.com/bfamzz/banking-service/mail"
+	"github.com/bfamzz/banking-service/util"
 	"github.com/hibiken/asynq"
 	"github.com/rs/zerolog/log"
 )
@@ -22,7 +25,7 @@ func (distributor *RedisTaskDistributor) DistributeTaskSendVerifyEmail(ctx conte
 	if err != nil {
 		return fmt.Errorf("failed to marshal task payload: %w", err)
 	}
-	
+
 	verifyTask := asynq.NewTask(TaskSendVerifyEmail, jsonPayload, opts...)
 	taskInfo, err := distributor.client.EnqueueContext(ctx, verifyTask)
 	if err != nil {
@@ -32,7 +35,7 @@ func (distributor *RedisTaskDistributor) DistributeTaskSendVerifyEmail(ctx conte
 	log.Info().Str("type", verifyTask.Type()).Bytes("payload", verifyTask.Payload()).
 		Str("queue", taskInfo.Queue).
 		Int("max_retry", taskInfo.MaxRetry).Msg("enqueued task")
-	
+
 	return nil
 }
 
@@ -47,9 +50,33 @@ func (processor *RedisTaskProcessor) ProcessTaskSendVerifyEmail(ctx context.Cont
 		return fmt.Errorf("failed to get user: %w", err)
 	}
 
-	// TODO: Send the email to the user
+	verifyEmail, err := processor.store.CreateVerifyEmail(ctx, db.CreateVerifyEmailParams{
+		Username:   user.Username,
+		Email:      user.Email,
+		SecretCode: util.RandomString(32),
+	})
+
+	if err != nil {
+		return fmt.Errorf("failed to create verify email: %w", err)
+	}
+
+	templateData := map[string]string{
+		"website": "https://www.famzzie.com",
+	}
+	templateDataString, err := json.Marshal(templateData)
+	if err != nil {
+		return fmt.Errorf("failed to create email template data: %w", err)
+	}
+
+	err = processor.mailer.SendTemplateEmail(mail.VerificationTemplateName, string(templateDataString),
+		[]string{ verifyEmail.Email }, nil, nil, nil)
+
+	if err != nil {
+		return fmt.Errorf("failed to send verification email: %w", err)
+	}
+
 	log.Info().Str("type", task.Type()).Bytes("payload", task.Payload()).
 		Str("email", user.Email).Msg("processed task")
-		
+
 	return nil
 }

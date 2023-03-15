@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"net"
 	"net/http"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"github.com/bfamzz/banking-service/api"
 	db "github.com/bfamzz/banking-service/db/sqlc"
 	"github.com/bfamzz/banking-service/gapi"
+	"github.com/bfamzz/banking-service/mail"
 	"github.com/bfamzz/banking-service/pb"
 	"github.com/bfamzz/banking-service/util"
 	"github.com/bfamzz/banking-service/worker"
@@ -60,7 +62,7 @@ func main() {
 
 	taskDistributor := worker.NewRedisTaskDistributor(redisOpt)
 
-	go runTaskProcessor(redisOpt, store)
+	go runTaskProcessor(config, sdkConfig, redisOpt, store)
 	go rungRPCGatewayServer(config, sdkConfig, store, taskDistributor)
 	rungRPCServer(config, sdkConfig, store, taskDistributor)
 }
@@ -78,8 +80,10 @@ func runDbMigration(migrationUrl string, dbSource string) {
 	log.Info().Msg("db migration was successful")
 }
 
-func runTaskProcessor(redisOpt asynq.RedisClientOpt, store db.Store) {
-	taskProcessor := worker.NewRedisTaskProcessor(redisOpt, store)
+func runTaskProcessor(config util.Config, sdkConfig aws.Config, redisOpt asynq.RedisClientOpt, store db.Store) {
+	fromEmailNameAndAddress := fmt.Sprintf("%s <%s>", config.EmailSenderName, config.EmailSenderAddress)
+	mailer := mail.NewSesSender(sdkConfig, config.EmailSenderAddress, fromEmailNameAndAddress)
+	taskProcessor := worker.NewRedisTaskProcessor(redisOpt, store, mailer)
 	log.Info().Msg("start task processor")
 
 	err := taskProcessor.Start()
