@@ -6,12 +6,11 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/sesv2"
 	"github.com/aws/aws-sdk-go-v2/service/sesv2/types"
-	"github.com/bfamzz/banking-service/util"
 )
 
 const (
-	welcomeTemplateName = "WelcomeTemplate"
-	verificationTemplateName = "VerificationTemplate"
+	WelcomeTemplateName      = "WelcomeTemplate"
+	VerificationTemplateName = "VerificationTemplate"
 )
 
 type SesSender struct {
@@ -28,11 +27,12 @@ func NewSesSender(sdkConfig aws.Config, fromEmailAddress string, fromEmailNameAn
 	}
 }
 
-func (emailSender *SesSender) SendTemplateEmail(templateData string, to []string, cc []string, bcc []string, attachments []string) error {
+func (emailSender *SesSender) SendTemplateEmail(templateName string, templateData string,
+	to []string, cc []string, bcc []string, attachments []string) error {
 	_, err := emailSender.client.SendEmail(context.TODO(), &sesv2.SendEmailInput{
 		Content: &types.EmailContent{
 			Template: &types.Template{
-				TemplateName: util.StringPointer(verificationTemplateName),
+				TemplateName: &templateName,
 				TemplateData: &templateData,
 			},
 		},
