@@ -105,3 +105,32 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 	)
 	return i, err
 }
+
+const updateUserVerifyEmail = `-- name: UpdateUserVerifyEmail :one
+UPDATE users
+SET
+    is_email_verified = $2
+WHERE
+    username = $1
+RETURNING username, hashed_password, full_name, email, password_changed_at, created_at, is_email_verified
+`
+
+type UpdateUserVerifyEmailParams struct {
+	Username        string `json:"username"`
+	IsEmailVerified bool   `json:"is_email_verified"`
+}
+
+func (q *Queries) UpdateUserVerifyEmail(ctx context.Context, arg UpdateUserVerifyEmailParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, updateUserVerifyEmail, arg.Username, arg.IsEmailVerified)
+	var i User
+	err := row.Scan(
+		&i.Username,
+		&i.HashedPassword,
+		&i.FullName,
+		&i.Email,
+		&i.PasswordChangedAt,
+		&i.CreatedAt,
+		&i.IsEmailVerified,
+	)
+	return i, err
+}
